@@ -1,5 +1,12 @@
 [package]
-name = "checked-builder"
+name = "derive-checked-builder"
 version = "0.1.0"
-authors = ["eddyb <edy.burt@gmail.com>", "c74d <8573dd@gmail.com>"]
+authors = ["c74d <8573dd@gmail.com>"]
 license = "Apache-2.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "0.11"
+quote = "0.3"

@@ -1,7 +1,7 @@
 with import <nixpkgs> {};
 
 stdenv.mkDerivation rec {
-  name = "checked-builder.rs";
+  name = "derive-checked-builder.rs";
 
   nativeBuildInputs = [
     cargo

@@ -1,23 +1,31 @@
 #[macro_use]
-extern crate checked_builder;
+extern crate derive_checked_builder;
 
-builder! {
-    struct Foo;
+#[derive(CheckedBuilder)]
+struct Foo {
+    a: String,
 
-    required {
-        a: String,
-        b: i32,
-        c: [u8; 3],
-    }
+    b: i32,
 
-    optional {
-        d: String,
-    }
+    c: [u8; 3],
 
-    impl {
-        fn format(self) -> String {
-            format!("{} {} {:?} {:?}", self.a, self.b, &self.c[..], self.d)
-        }
+    #[builder(default = "\"def\"")]
+    d: String,
+
+    #[builder(default(8))]
+    e: u16,
+}
+
+impl FooBuilder<String, i32, [u8; 3]> {
+    fn format(self) -> String {
+        format!(
+            "{} {} {:?} {:?} {}",
+            self.a,
+            self.b,
+            &self.c[..],
+            self.d,
+            self.e
+        )
     }
 }
 
@@ -25,8 +33,9 @@ builder! {
 fn main() {
     assert_eq!(
         Foo::default().a("foo").b(5).c([1, 2, 3]).b(7).format(),
-        "foo 7 [1, 2, 3] None"
+        "foo 7 [1, 2, 3] None 8"
     );
+
     assert_eq!(
         Foo::default()
             .a("bar")
@@ -34,6 +43,6 @@ fn main() {
             .c([0, 0, 0])
             .d("quux")
             .format(),
-        "bar 42 [0, 0, 0] Some(\"quux\")"
+        "bar 42 [0, 0, 0] Some(\"quux\") 8"
     );
 }

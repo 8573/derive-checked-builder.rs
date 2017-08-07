@@ -1,579 +1,205 @@
-//! This library provides a macro for generating builder `struct`s.
+//! This library provides a procedural (custom `#[derive]`) macro for generating builder `struct`s.
 //!
 //! This macro can be used as follows:
-//!
-//! ```rust
-//! #[macro_use]
-//! extern crate checked_builder;
-//!
-//! #[derive(Debug, PartialEq)]
-//! struct ItemRecord {
-//!     tracking_number: u64,
-//!     origin_year: u32,
-//!     target_port: u16,
-//!     routing_channel: u8,
-//!     filer_name: String,
-//!     inspector_name: Option<String>,
-//! }
-//!
-//! builder! {
-//!     // A `struct` named `Builder` will be generated. The name `Builder` is
-//!     // used for example only; any valid Rust identifier may be used. The
-//!     // keyword `pub` can be added before this declaration; if it be added,
-//!     // it will be copied to the generated `struct`'s definition.
-//!     struct Builder;
-//!
-//!     required {
-//!         // A list of fields, as would be found in a normal `struct`
-//!         // definition, with two exceptions: firstly, attributes cannot be
-//!         // applied to the fields; secondly, the comma after the last field
-//!         // is mandatory, because the Rust macro-by-example system can't seem
-//!         // to handle making it optional.
-//!         //
-//!         // Until all the fields in this list have been set on an instance of
-//!         // the generated builder `struct` type, the only thing one can, by
-//!         // default, do with that instance will be to set more of its fields.
-//!         //
-//!         // For example —
-//!         tracking_number: u64,
-//!         origin_year: u32,
-//!         filer_name: String,
-//!     }
-//!
-//!     optional {
-//!         // A list of fields, as above.
-//!         //
-//!         // It will not, by default, be necessary to set these fields on an
-//!         // instance of the generated builder `struct` type to do other
-//!         // things with that instance.
-//!         //
-//!         // For example —
-//!         target_port: u16,
-//!         routing_channel: u8,
-//!         inspector_name: String,
-//!     }
-//!
-//!     impl {
-//!         // In this block, one may write methods that will be callable on any
-//!         // instance of the generated builder `struct` type that has had all
-//!         // its required fields set.
-//!         //
-//!         // For example —
-//!         fn build(self) -> ItemRecord {
-//!             let Builder {
-//!                 tracking_number,
-//!                 origin_year,
-//!                 target_port,
-//!                 routing_channel,
-//!                 filer_name,
-//!                 inspector_name,
-//!             } = self;
-//!
-//!             ItemRecord {
-//!                 tracking_number,
-//!                 origin_year,
-//!                 target_port: target_port.unwrap_or(0),
-//!                 routing_channel: routing_channel.unwrap_or(1),
-//!                 filer_name,
-//!                 inspector_name,
-//!             }
-//!         }
-//!     }
-//! }
-//!
-//! fn main() {
-//!     // The trait `Default` will be implemented for the generated builder
-//!     // `struct` type.
-//!     let item_record = Builder::default()
-//!         // The fields can be set with methods of the same names, thus:
-//!         .tracking_number(12345_u64)
-//!         .origin_year(2017_u32)
-//!         // A setter method for a field of type `T` takes as argument any
-//!         // type implementing the trait `Into<T>`. Here, this genericness is
-//!         // used to pass a value of type `&str` to the setter for a field of
-//!         // type `String`:
-//!         .filer_name("Ferris the Crab")
-//!         .target_port(6697_u16)
-//!         .build();
-//!
-//!     assert_eq!(
-//!         item_record,
-//!         ItemRecord {
-//!             tracking_number: 12345,
-//!             origin_year: 2017,
-//!             target_port: 6697,
-//!             routing_channel: 1,
-//!             filer_name: String::from("Ferris the Crab"),
-//!             inspector_name: None,
-//!         }
-//!     );
-//! }
-//! ```
-//!
-//! # Credits
-//!
-//! This macro was originally written by [eddyb], and adapted by [c74d].
-//!
-//! [eddyb]: <https://github.com/eddyb>
-//! [c74d]: <https://github.com/8573>
 
-pub struct Unset;
+extern crate proc_macro;
+extern crate syn;
 
-#[macro_export]
-macro_rules! builder {
-    (struct $($token:tt)*) => {
-        builder!(@main [struct] $($token)*);
+#[macro_use]
+extern crate quote;
+
+use proc_macro::TokenStream;
+use quote::Tokens;
+use std::borrow::Cow;
+use syn::*;
+
+#[proc_macro_derive(CheckedBuilder)]
+pub fn checked_builder(input: TokenStream) -> TokenStream {
+    let src = input.to_string();
+    let ast = syn::parse_derive_input(&src).expect("Failed to parse input.");
+    let gen = checked_builder_impl(ast);
+    gen.parse().expect("Failed to parse output.")
+}
+
+fn checked_builder_impl(mut ty: DeriveInput) -> Tokens {
+    let fields = struct_fields(&ty.body)
+        .iter()
+        .cloned()
+        .collect::<Vec<Field>>();
+
+    ty.attrs.push(Attribute {
+        style: AttrStyle::Outer,
+        value: MetaItem::List(
+            "allow".into(),
+            vec![
+                NestedMetaItem::MetaItem(MetaItem::Word("non_camel_case_types".into())),
+            ],
+        ),
+        is_sugared_doc: false,
+    });
+
+    let our_attrs = ty.attrs
+        .iter()
+        .filter_map(|attr| match attr.value {
+            MetaItem::List(ref id, ref contents) if id == "builder" => Some(contents),
+            _ => None,
+        })
+        .flat_map(|contents| {
+            contents.iter().filter_map(|attr| match attr {
+                &NestedMetaItem::MetaItem(ref item) => Some(item),
+                _ => None,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let builder_ty_name = {
+        let name_attr = our_attrs
+            .iter()
+            .filter_map(|a| match a {
+                &&MetaItem::List(ref id, ref contents) if id == "name" => {
+                    Some(
+                        contents
+                            .iter()
+                            .filter_map(|a| match a {
+                                &NestedMetaItem::MetaItem(
+                        MetaItem::NameValue(ref id, Lit::Str(ref content, _))
+                    ) if ["prefix", "suffix"].contains(&id.as_ref()) => Some((id, content)),
+                                _ => None,
+                            })
+                            .collect::<Vec<_>>(),
+                    )
+                }
+                _ => None,
+            })
+            .flat_map(|x| x)
+            .collect::<Vec<_>>();
+
+        let prefix = name_attr
+            .iter()
+            .filter(|&&(name, _)| name == "prefix")
+            .map(|&(_, value)| value.as_ref())
+            .next()
+            .unwrap_or("");
+
+        let suffix = name_attr
+            .iter()
+            .filter(|&&(name, _)| name == "suffix")
+            .map(|&(_, value)| value.as_ref())
+            .next()
+            .unwrap_or("Builder");
+
+        Ident::new(format!("{}{}{}", prefix, ty.ident, suffix))
     };
 
-    (pub struct $($token:tt)*) => {
-        builder!(@main [pub struct] $($token)*);
-    };
+    let mut setters_generics = ty.generics.clone();
 
-    (@main [$($struct_keyword:tt)*] $builder_type_name:ident;
+    setters_generics.ty_params.extend(
+        fields.iter().map(|&Field {
+             ref ident, ..
+         }| {
+            ident.clone().unwrap().into()
+        }),
+    );
 
-     required {
-         $($req_field_name:ident: $req_field_ty:ty,)*
-     }
+    let mut setters = Tokens::new();
 
-     optional {
-         $($opt_field_name:ident: $opt_field_ty:ty,)*
-     }
+    for (field_idx, &Field {
+        ref ident,
+        vis: _,
+        ref attrs,
+        ref ty,
+    } )in fields.iter().enumerate()
+    {
+        let (ty_param, param_ty) = if is_prim_num_ty(ty) {
+            (None, Ty::Path(None, ident.clone().unwrap().into()))
+        } else {
+            (Some(quote!(<T: Into<#ty>>)), Ty::Path(None, "T".into()))
+        };
 
-     impl {
-         $($full_methods:tt)*
-     }
-    ) => {
-        #[allow(non_camel_case_types)]
-        $($struct_keyword)* $builder_type_name<$($req_field_name = $crate::Unset),*> {
-            $($req_field_name: $req_field_name,)*
-            $($opt_field_name: Option<$opt_field_ty>,)*
+        let setter_generics = setters_generics.clone();
+
+        let idx_in_ty_params = setter_generics.ty_params.len() - fields.len() + field_idx;
+
+        setter_generics.ty_params[idx_in_ty_params] =
+
+        let ctor_fields = Tokens::new();
+
+        for &Field { ident: ref ident_2, .. } in fields.iter() {
+            ctor_fields.append(if ident_2 == ident {
+                quote!(#ident_2: value,)
+            } else {
+                quote!(#ident_2: self.#ident_2,)
+            });
         }
 
-        impl Default for $builder_type_name {
-            fn default() -> Self {
-                $builder_type_name {
-                    $($req_field_name: $crate::Unset,)*
-                    $($opt_field_name: None,)*
+        setters.append(quote!(
+            fn #ident #ty_param (self, value: #param_ty) -> #builder_ty_name #setter_generics {
+                #builder_ty_name {
+                    #ctor_fields
                 }
             }
+        ))
+    }
+
+    ty.ident.clone_from(&builder_ty_name);
+
+    ty.generics.ty_params.extend(fields.iter().map(|&Field {
+         ref ident, ..
+     }| {
+        TyParam {
+            attrs: vec![],
+            ident: ident.clone().unwrap(),
+            bounds: vec![],
+            default: Some(Ty::Tup(vec![])),
         }
+    }));
 
-        builder!(@setters req
-            $builder_type_name:
-            optional { $($opt_field_name)* }
-            $(($req_field_name: $req_field_ty))*;
-        );
+    for &mut Field {
+        ref ident,
+        ref mut ty,
+        ..
+    } in struct_fields_mut(&mut ty.body)
+    {
+        *ty = Ty::Path(None, ident.clone().unwrap().into())
+    }
 
-        builder!(@setters opt
-            $builder_type_name:
-            required { $($req_field_name)* }
-            $(($opt_field_name: $opt_field_ty))*;
-        );
+    println!(
+        "{:#?}",
+        quote! {
+            #ty
 
-        impl $builder_type_name<$($req_field_ty),*> {
-            $($full_methods)*
-        }
-    };
-
-    (@setters req
-     $builder_type_name:ident:
-     optional { $($opt_field_name:ident)* }
-     ; $($rest:tt)*
-    ) => {};
-
-    (@setters req
-     $builder_type_name:ident:
-     optional { $($opt_field_name:ident)* }
-     ($name:ident: $ty:ty)
-     $(($next_field_name:ident: $next_field_ty:ty))*
-     ; $(($prev_field_name:ident: $prev_field_ty:ty))*
-    ) => {
-        #[allow(non_camel_case_types)]
-        impl<$($prev_field_name,)* $name, $($next_field_name,)*>
-            $builder_type_name<$($prev_field_name,)* $name, $($next_field_name,)*>
-        {
-            builder!(@setter req
-                $builder_type_name:
-                ($builder_type_name<$($prev_field_name,)* $ty, $($next_field_name,)*>)
-                ($name: $ty)
-                $($prev_field_name)* $($next_field_name)* $($opt_field_name)*
-            );
-        }
-
-        builder!(@setters req
-            $builder_type_name:
-            optional { $($opt_field_name)* }
-            $(($next_field_name: $next_field_ty))*
-            ; $(($prev_field_name: $prev_field_ty))* ($name: $ty)
-        );
-    };
-
-    (@setters opt
-     $builder_type_name:ident:
-     required { $($req_field_name:ident)* }
-     ; $($rest:tt)*
-    ) => {};
-
-    (@setters opt
-     $builder_type_name:ident:
-     required { $($req_field_name:ident)* }
-     ($name:ident: $ty:ty)
-     $(($next_field_name:ident: $next_field_ty:ty))*
-     ; $(($prev_field_name:ident: $prev_field_ty:ty))*
-    ) => {
-        #[allow(non_camel_case_types)]
-        impl<$($req_field_name,)*>
-            $builder_type_name<$($req_field_name,)*>
-        {
-            builder!(@setter opt
-                $builder_type_name:
-                ($name: $ty)
-            );
-        }
-
-        builder!(@setters opt
-            $builder_type_name:
-            required { $($req_field_name)* }
-            $(($next_field_name: $next_field_ty))*
-            ; $(($prev_field_name: $prev_field_ty))* ($name: $ty)
-        );
-    };
-
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: u8)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: u8) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
+            impl #setters_generics #builder_ty_name #setters_generics {
+                #setters
             }
         }
-    };
+    );
 
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: u16)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: u16) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
-        }
-    };
+    panic!("boo")
+}
 
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: u32)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: u32) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
+fn struct_fields(body: &Body) -> &Vec<Field> {
+    match body {
+        &Body::Struct(VariantData::Struct(ref fs)) => fs,
+        &Body::Enum(_) |
+        &Body::Struct(VariantData::Tuple(_)) |
+        &Body::Struct(VariantData::Unit) => {
+            panic!("`derive-checked-builder` only supports `struct`s with named fields.")
         }
-    };
+    }
+}
 
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: u64)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: u64) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
+fn struct_fields_mut(body: &mut Body) -> &mut Vec<Field> {
+    match body {
+        &mut Body::Struct(VariantData::Struct(ref mut fs)) => fs,
+        &mut Body::Enum(_) |
+        &mut Body::Struct(VariantData::Tuple(_)) |
+        &mut Body::Struct(VariantData::Unit) => {
+            panic!("`derive-checked-builder` only supports `struct`s with named fields.")
         }
-    };
+    }
+}
 
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: usize)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: usize) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
-        }
-    };
-
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: i8)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: i8) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
-        }
-    };
-
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: i16)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: i16) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
-        }
-    };
-
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: i32)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: i32) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
-        }
-    };
-
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: i64)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: i64) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
-        }
-    };
-
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: isize)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: isize) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
-        }
-    };
-
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: f32)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: f32) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
-        }
-    };
-
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: f64)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name(self, value: f64) -> $ret_ty {
-            $builder_type_name {
-                $name: value,
-                $($other_field_name: self.$other_field_name,)*
-            }
-        }
-    };
-
-    (@setter req
-     $builder_type_name:ident:
-     ($ret_ty:ty)
-     ($name:ident: $ty:ty)
-     $($other_field_name:ident)*
-    ) => {
-        fn $name<T: Into<$ty>>(self, value: T) -> $ret_ty {
-            $builder_type_name {
-                $name: value.into(),
-                $($other_field_name: self.$other_field_name,)*
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: u8)
-    ) => {
-        fn $name(self, value: u8) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: u16)
-    ) => {
-        fn $name(self, value: u16) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: u32)
-    ) => {
-        fn $name(self, value: u32) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: u64)
-    ) => {
-        fn $name(self, value: u64) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: usize)
-    ) => {
-        fn $name(self, value: usize) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: i8)
-    ) => {
-        fn $name(self, value: i8) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: i16)
-    ) => {
-        fn $name(self, value: i16) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: i32)
-    ) => {
-        fn $name(self, value: i32) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: i64)
-    ) => {
-        fn $name(self, value: i64) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: isize)
-    ) => {
-        fn $name(self, value: isize) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: f32)
-    ) => {
-        fn $name(self, value: f32) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: f64)
-    ) => {
-        fn $name(self, value: f64) -> Self {
-            $builder_type_name {
-                $name: Some(value),
-                ..self
-            }
-        }
-    };
-
-    (@setter opt
-     $builder_type_name:ident:
-     ($name:ident: $ty:ty)
-    ) => {
-        fn $name<T: Into<$ty>>(self, value: T) -> Self {
-            $builder_type_name {
-                $name: Some(value.into()),
-                ..self
-            }
-        }
-    };
+fn is_prim_num_ty(_ty: &Ty) -> bool {
+    // TODO
+    false
 }
