@@ -16,6 +16,6 @@ bld! {
 
 #[test]
 fn main() {
-    Foo::default().a("foo").b(5).c([1, 2, 3]).print();
+    Foo::default().a("foo").b(5).c([1, 2, 3]).b(7).print();
     Foo::default().a("bar").b(42).c([0, 0, 0]).d("quux").print();
 }

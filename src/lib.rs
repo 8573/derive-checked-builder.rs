@@ -7,9 +7,9 @@ macro_rules! bld {
         $($no:ident)*
     } ($name:ident: $ty:ty) $(($na:ident: $ta:ty))*;$(($nb:ident: $tb:ty))*) => {
         #[allow(non_camel_case_types)]
-        impl<$($nb,)* $($na,)*> $Builder<$($nb,)* (), $($na,)*> {
-            fn $name<$name: Into<$ty>>(self, $name: $name)
-                                       -> $Builder<$($nb,)* $ty, $($na,)*> {
+        impl<T, $($nb,)* $($na,)*> $Builder<$($nb,)* T, $($na,)*> {
+            fn $name<U: Into<$ty>>(self, $name: U)
+                                   -> $Builder<$($nb,)* $ty, $($na,)*> {
                 $Builder {
                     $($nb: self.$nb,)*
                     $name: $name.into(),
@@ -47,7 +47,7 @@ macro_rules! bld {
 
         #[allow(non_camel_case_types)]
         impl<$($nr),*> $Builder<$($nr,)*> {
-            $(fn $no<$no: Into<$to>>(self, $no: $no) -> Self {
+            $(fn $no<T: Into<$to>>(self, $no: T) -> Self {
                 $Builder { $no: Some($no.into()), ..self }
             })*
         }
