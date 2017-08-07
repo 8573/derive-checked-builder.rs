@@ -1,3 +1,5 @@
+pub struct Unset;
+
 #[macro_export]
 macro_rules! builder {
     (struct $($token:tt)*) => {
@@ -23,7 +25,7 @@ macro_rules! builder {
      }
     ) => {
         #[allow(non_camel_case_types)]
-        $($struct_keyword)* $Builder<$($nr=()),*> {
+        $($struct_keyword)* $Builder<$($nr = $crate::Unset),*> {
             $($nr: $nr,)*
             $($no: Option<$to>,)*
         }
@@ -31,7 +33,7 @@ macro_rules! builder {
         impl Default for $Builder {
             fn default() -> Self {
                 $Builder {
-                    $($nr: (),)*
+                    $($nr: $crate::Unset,)*
                     $($no: None,)*
                 }
             }
