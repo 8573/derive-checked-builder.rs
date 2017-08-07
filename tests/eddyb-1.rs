@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate checked_builder;
 
-bld! {
+builder! {
     Foo: required {
         a: String,
         b: i32,

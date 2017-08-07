@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! bld {
+macro_rules! builder {
     (@setters $Builder:ident: optional {
         $($no:ident)*
     } ;$($rest:tt)*) => {};
@@ -19,7 +19,7 @@ macro_rules! bld {
             }
         }
 
-        bld!(@setters $Builder: optional {
+        builder!(@setters $Builder: optional {
             $($no)*
         } $(($na: $ta))*; $(($nb: $tb))* ($name: $ty));
     };
@@ -43,7 +43,7 @@ macro_rules! bld {
             }
         }
 
-        bld!(@setters $Builder: optional { $($no)* } $(($nr: $tr))*;);
+        builder!(@setters $Builder: optional { $($no)* } $(($nr: $tr))*;);
 
         #[allow(non_camel_case_types)]
         impl<$($nr),*> $Builder<$($nr,)*> {
