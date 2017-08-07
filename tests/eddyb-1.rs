@@ -9,13 +9,24 @@ builder! {
     } optional {
         d: String
     }
-    fn print(self) {
-        println!("{} {} {:?} {:?}", self.a, self.b, &self.c[..], self.d);
+    fn format(self) -> String {
+        format!("{} {} {:?} {:?}", self.a, self.b, &self.c[..], self.d)
     }
 }
 
 #[test]
 fn main() {
-    Foo::default().a("foo").b(5).c([1, 2, 3]).b(7).print();
-    Foo::default().a("bar").b(42).c([0, 0, 0]).d("quux").print();
+    assert_eq!(
+        Foo::default().a("foo").b(5).c([1, 2, 3]).b(7).format(),
+        "foo 7 [1, 2, 3] None"
+    );
+    assert_eq!(
+        Foo::default()
+            .a("bar")
+            .b(42)
+            .c([0, 0, 0])
+            .d("quux")
+            .format(),
+        "bar 42 [0, 0, 0] Some(\"quux\")"
+    );
 }
