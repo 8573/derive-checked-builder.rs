@@ -13,11 +13,11 @@ macro_rules! builder {
     (@main [$($struct_keyword:tt)*] $builder_type_name:ident;
 
      required {
-         $($req_field_name:ident: $req_field_ty:ty),*
+         $($req_field_name:ident: $req_field_ty:ty,)*
      }
 
      optional {
-         $($opt_field_name:ident: $opt_field_ty:ty),*
+         $($opt_field_name:ident: $opt_field_ty:ty,)*
      }
 
      impl {

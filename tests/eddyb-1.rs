@@ -7,11 +7,11 @@ builder! {
     required {
         a: String,
         b: i32,
-        c: [u8; 3]
+        c: [u8; 3],
     }
 
     optional {
-        d: String
+        d: String,
     }
 
     impl {
