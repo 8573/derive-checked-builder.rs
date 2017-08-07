@@ -1,8 +1,17 @@
 #[macro_export]
 macro_rules! builder {
+    (struct $($token:tt)*) => {
+        builder!(@main [struct] $($token)*);
+    };
+
+    (pub struct $($token:tt)*) => {
+        builder!(@main [pub struct] $($token)*);
+    };
+
     (@setters $Builder:ident: optional {
         $($no:ident)*
     } ;$($rest:tt)*) => {};
+
     (@setters $Builder:ident: optional {
         $($no:ident)*
     } ($name:ident: $ty:ty) $(($na:ident: $ta:ty))*;$(($nb:ident: $tb:ty))*) => {
@@ -23,13 +32,23 @@ macro_rules! builder {
             $($no)*
         } $(($na: $ta))*; $(($nb: $tb))* ($name: $ty));
     };
-    ($Builder:ident: required {
-        $($nr:ident: $tr:ty),*
-    } optional {
-        $($no:ident: $to:ty),*
-    } $($full_methods:tt)*) => {
+
+    (@main [$($struct_keyword:tt)*] $Builder:ident;
+
+     required {
+         $($nr:ident: $tr:ty),*
+     }
+
+     optional {
+         $($no:ident: $to:ty),*
+     }
+
+     impl {
+         $($full_methods:tt)*
+     }
+    ) => {
         #[allow(non_camel_case_types)]
-        struct $Builder<$($nr=()),*> {
+        $($struct_keyword)* $Builder<$($nr=()),*> {
             $($nr: $nr,)*
             $($no: Option<$to>,)*
         }
@@ -55,5 +74,5 @@ macro_rules! builder {
         impl $Builder<$($tr),*> {
             $($full_methods)*
         }
-    }
+    };
 }

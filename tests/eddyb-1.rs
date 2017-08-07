@@ -2,15 +2,22 @@
 extern crate checked_builder;
 
 builder! {
-    Foo: required {
+    struct Foo;
+
+    required {
         a: String,
         b: i32,
         c: [u8; 3]
-    } optional {
+    }
+
+    optional {
         d: String
     }
-    fn format(self) -> String {
-        format!("{} {} {:?} {:?}", self.a, self.b, &self.c[..], self.d)
+
+    impl {
+        fn format(self) -> String {
+            format!("{} {} {:?} {:?}", self.a, self.b, &self.c[..], self.d)
+        }
     }
 }
 
