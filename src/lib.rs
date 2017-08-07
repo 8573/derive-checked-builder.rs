@@ -247,7 +247,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: u8) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -261,7 +261,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: u16) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -275,7 +275,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: u32) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -289,7 +289,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: u64) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -303,7 +303,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: usize) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -317,7 +317,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: i8) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -331,7 +331,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: i16) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -345,7 +345,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: i32) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -359,7 +359,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: i64) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -373,7 +373,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: isize) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -387,7 +387,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: f32) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -401,7 +401,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: f64) -> $ret_ty {
             $builder_type_name {
-                $name: value.into(),
+                $name: value,
                 $($other_field_name: self.$other_field_name,)*
             }
         }
@@ -427,7 +427,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: u8) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -439,7 +439,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: u16) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -451,7 +451,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: u32) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -463,7 +463,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: u64) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -475,7 +475,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: usize) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -487,7 +487,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: i8) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -499,7 +499,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: i16) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -511,7 +511,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: i32) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -523,7 +523,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: i64) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -535,7 +535,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: isize) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -547,7 +547,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: f32) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
@@ -559,7 +559,7 @@ macro_rules! builder {
     ) => {
         fn $name(self, value: f64) -> Self {
             $builder_type_name {
-                $name: Some(value.into()),
+                $name: Some(value),
                 ..self
             }
         }
