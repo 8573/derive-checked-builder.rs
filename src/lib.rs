@@ -25,14 +25,14 @@ macro_rules! builder {
         #[allow(non_camel_case_types)]
         $($struct_keyword)* $Builder<$($nr=()),*> {
             $($nr: $nr,)*
-                $($no: Option<$to>,)*
+            $($no: Option<$to>,)*
         }
 
         impl Default for $Builder {
             fn default() -> Self {
                 $Builder {
                     $($nr: (),)*
-                        $($no: None,)*
+                    $($no: None,)*
                 }
             }
         }
@@ -64,9 +64,9 @@ macro_rules! builder {
                 -> $Builder<$($nb,)* $ty, $($na,)*> {
                     $Builder {
                         $($nb: self.$nb,)*
-                            $name: $name.into(),
-                            $($na: self.$na,)*
-                                $($no: self.$no,)*
+                        $name: $name.into(),
+                        $($na: self.$na,)*
+                        $($no: self.$no,)*
                     }
                 }
         }
