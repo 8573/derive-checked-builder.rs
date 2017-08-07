@@ -17,20 +17,22 @@
 //! }
 //!
 //! builder! {
-//!     // A `struct` named `Builder` will be generated. The name `Builder` is used for example
-//!     // only; any valid Rust identifier may be used. The keyword `pub` can be added before this
-//!     // declaration; if it be added, it will be copied to the generated `struct`'s definition.
+//!     // A `struct` named `Builder` will be generated. The name `Builder` is
+//!     // used for example only; any valid Rust identifier may be used. The
+//!     // keyword `pub` can be added before this declaration; if it be added,
+//!     // it will be copied to the generated `struct`'s definition.
 //!     struct Builder;
 //!
 //!     required {
-//!         // A list of fields, as would be found in a normal `struct` definition, with two
-//!         // exceptions: firstly, attributes cannot be applied to the fields; secondly, the comma
-//!         // after the last field is mandatory, because the Rust macro-by-example system can't
-//!         // seem to handle making it optional.
+//!         // A list of fields, as would be found in a normal `struct`
+//!         // definition, with two exceptions: firstly, attributes cannot be
+//!         // applied to the fields; secondly, the comma after the last field
+//!         // is mandatory, because the Rust macro-by-example system can't seem
+//!         // to handle making it optional.
 //!         //
-//!         // Until all the fields in this list have been set on an instance of the generated
-//!         // builder `struct` type, the only thing one can, by default, do with that instance
-//!         // will be to set more of its fields.
+//!         // Until all the fields in this list have been set on an instance of
+//!         // the generated builder `struct` type, the only thing one can, by
+//!         // default, do with that instance will be to set more of its fields.
 //!         //
 //!         // For example —
 //!         tracking_number: u64,
@@ -41,8 +43,9 @@
 //!     optional {
 //!         // A list of fields, as above.
 //!         //
-//!         // It will not, by default, be necessary to set these fields on an instance of the
-//!         // generated builder `struct` type to do other things with that instance.
+//!         // It will not, by default, be necessary to set these fields on an
+//!         // instance of the generated builder `struct` type to do other
+//!         // things with that instance.
 //!         //
 //!         // For example —
 //!         target_port: u16,
@@ -51,8 +54,9 @@
 //!     }
 //!
 //!     impl {
-//!         // In this block, one may write methods that will be callable on any instance of the
-//!         // generated builder `struct` type that has had all its required fields set.
+//!         // In this block, one may write methods that will be callable on any
+//!         // instance of the generated builder `struct` type that has had all
+//!         // its required fields set.
 //!         //
 //!         // For example —
 //!         fn build(self) -> ItemRecord {
@@ -78,14 +82,16 @@
 //! }
 //!
 //! fn main() {
-//!     // The trait `Default` will be implemented for the generated builder `struct` type.
+//!     // The trait `Default` will be implemented for the generated builder
+//!     // `struct` type.
 //!     let item_record = Builder::default()
 //!         // The fields can be set with methods of the same names, thus:
 //!         .tracking_number(12345_u64)
 //!         .origin_year(2017_u32)
-//!         // A setter method for a field of type `T` takes as argument any type implementing the
-//!         // trait `Into<T>`. Here, this genericness is used to pass a value of type `&str` to
-//!         // the setter for a field of type `String`:
+//!         // A setter method for a field of type `T` takes as argument any
+//!         // type implementing the trait `Into<T>`. Here, this genericness is
+//!         // used to pass a value of type `&str` to the setter for a field of
+//!         // type `String`:
 //!         .filer_name("Ferris the Crab")
 //!         .target_port(6697_u16)
 //!         .build();
