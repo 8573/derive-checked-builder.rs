@@ -10,14 +10,14 @@ macro_rules! builder {
         builder!(@main [pub struct] $($token)*);
     };
 
-    (@main [$($struct_keyword:tt)*] $Builder:ident;
+    (@main [$($struct_keyword:tt)*] $builder_type_name:ident;
 
      required {
-         $($nr:ident: $tr:ty),*
+         $($req_field_name:ident: $req_field_ty:ty),*
      }
 
      optional {
-         $($no:ident: $to:ty),*
+         $($opt_field_name:ident: $opt_field_ty:ty),*
      }
 
      impl {
@@ -25,56 +25,72 @@ macro_rules! builder {
      }
     ) => {
         #[allow(non_camel_case_types)]
-        $($struct_keyword)* $Builder<$($nr = $crate::Unset),*> {
-            $($nr: $nr,)*
-            $($no: Option<$to>,)*
+        $($struct_keyword)* $builder_type_name<$($req_field_name = $crate::Unset),*> {
+            $($req_field_name: $req_field_name,)*
+            $($opt_field_name: Option<$opt_field_ty>,)*
         }
 
-        impl Default for $Builder {
+        impl Default for $builder_type_name {
             fn default() -> Self {
-                $Builder {
-                    $($nr: $crate::Unset,)*
-                    $($no: None,)*
+                $builder_type_name {
+                    $($req_field_name: $crate::Unset,)*
+                    $($opt_field_name: None,)*
                 }
             }
         }
 
-        builder!(@setters $Builder: optional { $($no)* } $(($nr: $tr))*;);
+        builder!(@setters
+            $builder_type_name:
+            optional { $($opt_field_name)* }
+            $(($req_field_name: $req_field_ty))*;
+        );
 
         #[allow(non_camel_case_types)]
-        impl<$($nr),*> $Builder<$($nr,)*> {
-            $(fn $no<T: Into<$to>>(self, $no: T) -> Self {
-                $Builder { $no: Some($no.into()), ..self }
+        impl<$($req_field_name),*> $builder_type_name<$($req_field_name,)*> {
+            $(fn $opt_field_name<T: Into<$opt_field_ty>>(self, $opt_field_name: T) -> Self {
+                $builder_type_name { $opt_field_name: Some($opt_field_name.into()), ..self }
             })*
         }
 
-        impl $Builder<$($tr),*> {
+        impl $builder_type_name<$($req_field_ty),*> {
             $($full_methods)*
         }
     };
 
-    (@setters $Builder:ident: optional {
-        $($no:ident)*
-    } ;$($rest:tt)*) => {};
+    (@setters
+     $builder_type_name:ident:
+     optional { $($opt_field_name:ident)* }
+     ; $($rest:tt)*
+    ) => {};
 
-    (@setters $Builder:ident: optional {
-        $($no:ident)*
-    } ($name:ident: $ty:ty) $(($na:ident: $ta:ty))*;$(($nb:ident: $tb:ty))*) => {
+    (@setters
+     $builder_type_name:ident:
+     optional { $($opt_field_name:ident)* }
+     ($name:ident: $ty:ty)
+     $(($next_field_name:ident: $next_field_ty:ty))*
+     ; $(($prev_field_name:ident: $prev_field_ty:ty))*
+    ) => {
         #[allow(non_camel_case_types)]
-        impl<T, $($nb,)* $($na,)*> $Builder<$($nb,)* T, $($na,)*> {
-            fn $name<U: Into<$ty>>(self, $name: U)
-                -> $Builder<$($nb,)* $ty, $($na,)*> {
-                    $Builder {
-                        $($nb: self.$nb,)*
-                        $name: $name.into(),
-                        $($na: self.$na,)*
-                        $($no: self.$no,)*
-                    }
+        impl<T, $($prev_field_name,)* $($next_field_name,)*>
+            $builder_type_name<$($prev_field_name,)* T, $($next_field_name,)*>
+        {
+            fn $name<U: Into<$ty>>(
+                self, $name: U
+            ) -> $builder_type_name<$($prev_field_name,)* $ty, $($next_field_name,)*> {
+                $builder_type_name {
+                    $($prev_field_name: self.$prev_field_name,)*
+                    $name: $name.into(),
+                    $($next_field_name: self.$next_field_name,)*
+                    $($opt_field_name: self.$opt_field_name,)*
                 }
+            }
         }
 
-        builder!(@setters $Builder: optional {
-            $($no)*
-        } $(($na: $ta))*; $(($nb: $tb))* ($name: $ty));
+        builder!(@setters
+            $builder_type_name:
+            optional { $($opt_field_name)* }
+            $(($next_field_name: $next_field_ty))*
+            ; $(($prev_field_name: $prev_field_ty))* ($name: $ty)
+        );
     };
 }
