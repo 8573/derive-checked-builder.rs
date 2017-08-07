@@ -24,7 +24,10 @@ clean:
 	@nix-shell --run 'cargo clean'
 
 fmt:
-	@nix-shell --run 'cargo-fmt'
+	@nix-shell --run '\
+	   rustfmt src/lib.rs; \
+	   cargo-fmt; \
+	 '
 
 shell:
 	@nix-shell
