@@ -29,7 +29,7 @@ fmt:
 shell:
 	@nix-shell
 
-expanded-test-1.rs:
+expanded-test-1.rs: tests/eddyb-1.rs
 	@nix-shell --run '\
 	   cargo rustc --test eddyb-1 -- \
 	     -Z unstable-options --pretty expanded \
