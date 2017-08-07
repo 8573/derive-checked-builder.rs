@@ -8,31 +8,6 @@ macro_rules! builder {
         builder!(@main [pub struct] $($token)*);
     };
 
-    (@setters $Builder:ident: optional {
-        $($no:ident)*
-    } ;$($rest:tt)*) => {};
-
-    (@setters $Builder:ident: optional {
-        $($no:ident)*
-    } ($name:ident: $ty:ty) $(($na:ident: $ta:ty))*;$(($nb:ident: $tb:ty))*) => {
-        #[allow(non_camel_case_types)]
-        impl<T, $($nb,)* $($na,)*> $Builder<$($nb,)* T, $($na,)*> {
-            fn $name<U: Into<$ty>>(self, $name: U)
-                -> $Builder<$($nb,)* $ty, $($na,)*> {
-                    $Builder {
-                        $($nb: self.$nb,)*
-                            $name: $name.into(),
-                            $($na: self.$na,)*
-                                $($no: self.$no,)*
-                    }
-                }
-        }
-
-        builder!(@setters $Builder: optional {
-            $($no)*
-        } $(($na: $ta))*; $(($nb: $tb))* ($name: $ty));
-    };
-
     (@main [$($struct_keyword:tt)*] $Builder:ident;
 
      required {
@@ -74,5 +49,30 @@ macro_rules! builder {
         impl $Builder<$($tr),*> {
             $($full_methods)*
         }
+    };
+
+    (@setters $Builder:ident: optional {
+        $($no:ident)*
+    } ;$($rest:tt)*) => {};
+
+    (@setters $Builder:ident: optional {
+        $($no:ident)*
+    } ($name:ident: $ty:ty) $(($na:ident: $ta:ty))*;$(($nb:ident: $tb:ty))*) => {
+        #[allow(non_camel_case_types)]
+        impl<T, $($nb,)* $($na,)*> $Builder<$($nb,)* T, $($na,)*> {
+            fn $name<U: Into<$ty>>(self, $name: U)
+                -> $Builder<$($nb,)* $ty, $($na,)*> {
+                    $Builder {
+                        $($nb: self.$nb,)*
+                            $name: $name.into(),
+                            $($na: self.$na,)*
+                                $($no: self.$no,)*
+                    }
+                }
+        }
+
+        builder!(@setters $Builder: optional {
+            $($no)*
+        } $(($na: $ta))*; $(($nb: $tb))* ($name: $ty));
     };
 }
